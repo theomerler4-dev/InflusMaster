@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Influencer Masters</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0f0c1a;
+      --card-bg: rgba(255,255,255,0.08);
+      --accent: #ff2e93;
+      --accent2: #a855f7;
+      --gold: #ffd700;
+      --text: #ffffff;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 90px;
+    }
+    .header {
+      background: linear-gradient(135deg, #ff2e93, #a855f7);
+      padding: 16px 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(255,46,147,0.3);
+    }
+    .header h1 { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { font-size: 0.8rem; opacity: 0.9; margin-top: 2px; }
+
+    .tabs {
+      display: flex;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 14px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+           transition: all 0.2s;
+    }
+    .tab.active {
+      background: linear-gradient(90deg, rgba(255,46,147,0.2), rgba(168,85,247,0.2));
+      border-bottom: 3px solid var(--accent);
+    }
+
+    .content { padding: 16px; display: none; }
+    .content.active { display: block; }
+
+    /* PACKS */
+    .pack-section { text-align: center; margin-top: 20px; }
+    .pack-card {
+      width: 200px;
+      height: 280px;
+      margin: 0 auto 20px;
+      background: linear-gradient(145deg, #ff2e93, #a855f7);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 15px 40px rgba(255,46,147,0.4);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.3s;
+    }
+    .pack-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+      animation: shine 3s infinite;
+    }
+    @keyframes shine {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    .pack-card h2 { font-size: 1.8rem; margin-bottom: 8px; }
+    .pack-card p { font-size: 0.9rem; opacity: 0.9; }
+    .open-btn {
+      background: white;
+      color: #ff2e93;
+      border: none;
+      padding: 14px 40px;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 1.1rem;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(255,255,255,0.3);
+      transition: all 0.2s;
+    }
+    .open-btn:active { transform: scale(0.95); }
+    .open-btn:disabled {
+      background: #555;
+      color: #aaa;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .cooldown { margin-top: 12px; font-size: 0.9rem; opacity: 0.8; }
+
+    /* RESULTS */
+    .results {
+      display: none;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .results.show { display: flex; }
+
+    /* CARDS */
+    .card {
+      width: 140px;
+      height: 200px;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      background: var(--card-bg);
+      border: 2px solid rgba(255,255,255,0.1);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+      transition: transform 0.3s;
+    }
+    .card:active { transform: scale(0.97); }
+    .card-img {
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5rem;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+    }
+    .card-info {
+      padding: 10px;
+      text-align: center;
+    }
+    .card-name { font-weight: 700; font-size: 0.85rem; margin-bottom: 4px; }
+    .rarity {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    .rarity.common { background: #6b7280; }
+    .rarity.rare { background: #3b82f6; }
+    .rarity.epic { background: #a855f7; }
+    .rarity.legendary { background: linear-gradient(90deg, #ffd700, #ff8c00); color: #000; }
+
+    /* COLLECTION */
+    .collection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+    }
+    .stats {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 1rem;
+      opacity: 0.9;
+    }
+    .empty { text-align: center; padding: 40px 20px; opacity: 0.6; }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(15,12,26,0.95);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      padding: 8px 0 env(safe-area-inset-bottom);
+      z-index: 100;
+    }
+    .nav-item {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      font-size: 0.75rem;
+      opacity: 0.6;
+      cursor: pointer;
+    }
+    .nav-item.active { opacity: 1; color: var(--accent); }
+    .nav-item span { display: block; font-size: 1.4rem; margin-bottom: 2px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✨ Influencer Masters</h1>
+    <p>Collecte tes influenceuses préférées</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="packs">Packs</div>
+    <div class="tab" data-tab="collection">Collection</div>
+  </div>
+
+  <!-- PACKS -->
+  <div id="packs" class="content active">
+    <div class="pack-section">
+      <div class="pack-card">
+        <h2>🎁</h2>
+        <p>Pack Influenceuses</p>
+        <p style="font-size:0.8rem;margin-top:8px">5 cartes • Toutes raretés</p>
+      </div>
+      <button class="open-btn" id="openBtn">Ouvrir un pack</button>
+      <div class="cooldown" id="cooldownText"></div>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <!-- COLLECTION -->
+  <div id="collection" class="content">
+    <div class="stats" id="stats">0 / 5 influenceuses</div>
+    <div class="collection-grid" id="collectionGrid"></div>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item active" data-tab="packs"><span>🎁</span>Packs</div>
+    <div class="nav-item" data-tab="collection"><span>💎</span>Collection</div>
+  </div>
+
+  <script>
+    // === CONFIG ===
+    const INFLUENCERS = [
+      { id: "dua", name: "Dua Lipa", emoji: "🎤", color: "#ff2e93" },
+      { id: "lea", name: "Léa Elui", emoji: "💃", color: "#a855f7" },
+      { id: "julia", name: "Julia Haller", emoji: "✨", color: "#ec4899" },
+      { id: "layna", name: "Layna Sacino", emoji: "🔥", color: "#f43f5e" },
+      { id: "sadie", name: "Sadie McKenna", emoji: "🌸", color: "#c084fc" }
+    ];
+
+    const RARITIES = [
+      { name: "common", weight: 55, label: "Common" },
+      { name: "rare", weight: 30, label: "Rare" },
+      { name: "epic", weight: 12, label: "Epic" },
+      { name: "legendary", weight: 3, label: "Legendary" }
+    ];
+
+    const COOLDOWN = 10 * 60 * 1000; // 10 minutes
+
+    // === TELEGRAM ===
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor("#0f0c1a");
+      tg.setBackgroundColor("#0f0c1a");
+    }
+
+    // === STORAGE ===
+    let collection = JSON.parse(localStorage.getItem("im_collection") || "{}");
+    let lastOpen = parseInt(localStorage.getItem("im_lastOpen") || "0");
+
+    // === UTILS ===
+    function getRandomRarity() {
+      const total = RARITIES.reduce((s, r) => s + r.weight, 0);
+      let rand = Math.random() * total;
+      for (const r of RARITIES) {
+        if (rand < r.weight) return r;
+        rand -= r.weight;
+      }
+      return RARITIES[0];
+    }
+
+    function openPack() {
+      const now = Date.now();
+      if (now - lastOpen < COOLDOWN) return;
+
+      const cards = [];
+      for (let i = 0; i < 5; i++) {
+        const influencer = INFLUENCERS[Math.floor(Math.random() * INFLUENCERS.length)];
+        const rarity = getRandomRarity();
+        cards.push({ ...influencer, rarity: rarity.name, rarityLabel: rarity.label });
+
+        // Ajouter à la collection
+        if (!collection[influencer.id]) collection[influencer.id] = {};
+        if (!collection[influencer.id][rarity.name]) collection[influencer.id][rarity.name] = 0;
+        collection[influencer.id][rarity.name]++;
+      }
+
+      lastOpen = now;
+      localStorage.setItem("im_collection", JSON.stringify(collection));
+      localStorage.setItem("im_lastOpen", lastOpen.toString());
+
+      showResults(cards);
+      updateUI();
+      if (tg) tg.HapticFeedback.impactOccurred("medium");
+    }
+
+    function showResults(cards) {
+      const container = document.getElementById("results");
+      container.innerHTML = "";
+      container.classList.add("show");
+
+      cards.forEach((c, i) => {
+        setTimeout(() => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="card-img" style="background: linear-gradient(135deg, ${c.color}33, ${c.color}11)">${c.emoji}</div>
+            <div class="card-info">
+              <div class="card-name">${c.name}</div>
+              <div class="rarity ${c.rarity}">${c.rarityLabel}</div>
+            </div>
+          `;
+          container.appendChild(card);
+        }, i * 150);
+      });
+    }
+
+    function updateUI() {
+      // Cooldown
+      const now = Date.now();
+      const remaining = COOLDOWN - (now - lastOpen);
+      const btn = document.getElementById("openBtn");
+      const text = document.getElementById("cooldownText");
+
+      if (remaining > 0) {
+        btn.disabled = true;
+        const min = Math.floor(remaining / 60000);
+        const sec = Math.floor((remaining % 60000) / 1000);
+        text.textContent = `Prochain pack dans ${min}:${sec.toString().padStart(2, "0")}`;
+        setTimeout(updateUI, 1000);
+      } else {
+        btn.disabled = false;
+        text.textContent = "Pack disponible !";
+      }
+
+      // Collection
+      const unique = Object.keys(collection).length;
+      document.getElementById("stats").textContent = `${unique} / ${INFLUENCERS.length} influenceuses collectées`;
+
+      const grid = document.getElementById("collectionGrid");
+      grid.innerHTML = "";
+
+      if (unique === 0) {
+        grid.innerHTML = `<div class="empty">Ouvre des packs pour commencer ta collection ✨</div>`;
+        return;
+      }
+
+      INFLUENCERS.forEach(inf => {
+        if (!collection[inf.id]) return;
+        const rarities = collection[inf.id];
+        // Affiche la plus rare possédée
+        const order = ["legendary", "epic", "rare", "common"];
+        let best = "common";
+        for (const r of order) {
+          if (rarities[r]) { best = r; break; }
+        }
+        const count = Object.values(rarities).reduce((a, b) => a + b, 0);
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="card-img" style="background: linear-gradient(135deg, ${inf.color}44, ${inf.color}11)">${inf.emoji}</div>
+          <div class="card-info">
+            <div class="card-name">${inf.name}</div>
+            <div class="rarity ${best}">${best.toUpperCase()} ×${count}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // === NAV ===
+    document.querySelectorAll(".tab, .nav-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const tab = el.dataset.tab;
+        document.querySelectorAll(".tab, .nav-item, .content").forEach(e => e.classList.remove("active"));
+        document.querySelectorAll(`[data-tab="${tab}"]`).forEach(e => e.classList.add("active"));
+        document.getElementById(tab).classList.add("active");
+        if (tab === "collection") updateUI();
+      });
+    });
+
+    document.getElementById("openBtn").addEventListener("click", openPack);
+
+    // Init
+    updateUI();
+  </script>
+</body>
+</html>
